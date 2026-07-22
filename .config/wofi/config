@@ -1,0 +1,14 @@
+[config]
+show=drun
+width=560
+height=360
+location=center
+prompt=run >
+allow_images=false
+matching=fuzzy
+insensitive=true
+hide_scroll=true
+columns=1
+no_actions=true
+term=kitty
+

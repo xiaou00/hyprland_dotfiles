@@ -1,0 +1,54 @@
+# yazi.toml
+[manager]
+show_hidden = true
+show_symlink = true
+sort_by = "natural"
+sort_sensitive = false
+sort_reverse = false
+sort_dir_first = true
+linemode = "size"
+scrolloff = 4
+ratio = [ 1, 3, 4 ]
+
+[opener]
+play = [
+	{ run = 'mpv "$@"', orphan = true, for = "unix" },
+]
+edit = [
+	{ run = '"neovide" "$@"', orphan=true, block = true, for = "unix" },
+]
+open = [
+	{ run = 'xdg-open "$@"', desc = "Open" },
+]
+pdf-viewer = [
+	{ run = 'zathura "$@"', orphan = true, desc = "Zathura", for = "unix" },
+]
+
+[open]
+prepend_rules = [
+    { mime = "application/pdf", use = [ "pdf-viewer" ] },
+    { url = "*.pdf", use = "pdf-viewer" },
+	{ url = "*.json", use = "edit" },
+	{ url = "*.sh", use = "edit" },
+	{ url = "*.toml", use = "edit" },
+	{ url = "*.y*ml", use = "edit" },
+	{ url = "*config", use = "edit" },
+	{ url = "*.cfg", use = "edit" },
+	{ url = "*env", use = "edit" },
+	{ url = "*.d", use = "edit" },
+	{ url = "*.md", use = "edit" },
+	{ url = "*.txt", use = "edit" },
+	{ url = ".zsh*", use = "edit" },
+	{ url = "*.ini", use = "edit" },
+	{ url = "*.lua", use = "edit" },
+	{ url = "*.xml", use = "edit" },
+	{ url = "*.log", use = "edit" },
+# open with normal / gnome / kde
+	{ url = "*.ods", use = "open" },
+# open with multimedia player
+	{ url = "*.mp3", use = "play" },
+
+]
+append_rules = [
+	{ url = "*", use = "edit" },
+]

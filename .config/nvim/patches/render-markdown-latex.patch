@@ -1,0 +1,145 @@
+diff --git a/lua/render-markdown/handler/latex.lua b/lua/render-markdown/handler/latex.lua
+index 964ada9..bc61f6a 100644
+--- a/lua/render-markdown/handler/latex.lua
++++ b/lua/render-markdown/handler/latex.lua
+@@ -1,5 +1,6 @@
+ local Context = require('render-markdown.request.context')
+ local Indent = require('render-markdown.lib.indent')
++local Line = require('render-markdown.lib.line')
+ local Marks = require('render-markdown.lib.marks')
+ local Node = require('render-markdown.lib.node')
+ local env = require('render-markdown.lib.env')
+@@ -45,11 +46,34 @@ function Handler:run(root, last)
+     self.context.latex:add(node)
+     if last then
+         local nodes = self.context.latex:get()
+-        local inputs = Handler.inputs(nodes)
++        -- Split inline ($) and display ($$) nodes
++        local display_nodes = {}
++        local inline_nodes = {}
++        for _, node in ipairs(nodes) do
++            if node.text:sub(1, 2) == '$$' then
++                display_nodes[#display_nodes + 1] = node
++            else
++                inline_nodes[#inline_nodes + 1] = node
++            end
++        end
++        -- Display math: full converter chain (utftex + latex2text)
++        local display_inputs = Handler.inputs(display_nodes)
+         for _, cmd in ipairs(cmds) do
+-            inputs = Handler.convert(cmd, inputs)
++            display_inputs = Handler.convert(cmd, display_inputs)
+         end
+-        for _, input in ipairs(inputs) do
++        for _, input in ipairs(display_inputs) do
++            log.add('error', 'ConvertersFailed', input)
++            Handler.cache[input] = 'error'
++        end
++        -- Inline math: latex2text only (skip utftex for cleaner inline output)
++        local inline_inputs = Handler.inputs(inline_nodes)
++        local text_cmds = env.commands('latex2text')
++        if #text_cmds > 0 then
++            inline_inputs = Handler.convert(text_cmds[1], inline_inputs)
++        elseif #cmds > 0 then
++            inline_inputs = Handler.convert(cmds[#cmds], inline_inputs)
++        end
++        for _, input in ipairs(inline_inputs) do
+             log.add('error', 'ConvertersFailed', input)
+             Handler.cache[input] = 'error'
+         end
+@@ -160,6 +184,7 @@ end
+ function Handler:render(row, nodes)
+     local first = nodes[1]
+     local indent = self:indent(first)
++    local hl = self:math_highlight(first)
+ 
+     local lines_above = {} ---@type string[]
+     local lines_below = {} ---@type string[]
+@@ -218,14 +243,25 @@ function Handler:render(row, nodes)
+                 below = #output
+             else
+                 assert(node:height() == 1, 'invalid center height')
+-                local center = math.floor(#output / 2) + 1
+-                above = center - 1
+-                below = #output - center
+-                self.marks:over(self.config, 'latex', node, {
+-                    virt_text = { { output[center], self.config.highlight } },
+-                    virt_text_pos = 'inline',
+-                    conceal = '',
+-                })
++                if #output == 1 then
++                    -- Single-line: inline replacement, original behavior
++                    above = 0
++                    below = 0
++                    self.marks:over(self.config, 'latex', node, {
++                        virt_text = { { output[1], hl } },
++                        virt_text_pos = 'inline',
++                        conceal = '',
++                    })
++                else
++                    -- Multi-line: all lines as virt_lines_above, conceal source
++                    above = #output
++                    below = 0
++                    self.marks:over(self.config, 'latex', node, {
++                        virt_text = { { '', hl } },
++                        virt_text_pos = 'inline',
++                        conceal = '',
++                    })
++                end
+             end
+ 
+             -- fill in new lines at top and bottom
+@@ -261,7 +297,21 @@ function Handler:render(row, nodes)
+         end
+         self.marks:add(self.config, 'virtual_lines', row, 0, {
+             virt_lines = iter.list.map(lines, function(line)
+-                return indent:copy():text(line, self.config.highlight):get()
++                if hl == self.config.highlight then
++                    return indent:copy():text(line, hl):get()
++                end
++                -- Inside a callout: prepend quote icon bar and fill bg to window width
++                local quote_icon = self.context.config.quote.icon
++                local l = Line.new(hl)
++                l:extend(indent:copy())
++                l:text(quote_icon, hl)
++                l:pad(1, hl)
++                l:text(line, hl)
++                local remaining = vim.o.columns - l:width()
++                if remaining > 0 then
++                    l:pad(remaining, hl)
++                end
++                return l:get()
+             end),
+             virt_lines_above = above,
+         })
+@@ -271,6 +321,30 @@ function Handler:render(row, nodes)
+     add_lines(lines_below, false)
+ end
+ 
++---@private
++---@param node render.md.Node
++---@return string
++function Handler:math_highlight(node)
++    local buf = self.context.buf
++    local md_node = vim.treesitter.get_node({
++        bufnr = buf,
++        pos   = { node.start_row, node.start_col },
++        lang  = 'markdown',
++    })
++    if not md_node then return self.config.highlight end
++    local cur = md_node
++    while cur do
++        if cur:type() == 'block_quote' then
++            local bq_row = cur:start()
++            local value  = self.context.callout.values[bq_row]
++            if value then return value.config.highlight end
++            return self.config.highlight
++        end
++        cur = cur:parent()
++    end
++    return self.config.highlight
++end
++
+ ---@private
+ ---@param node render.md.Node
+ ---@return render.md.Line
