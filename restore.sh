@@ -28,6 +28,9 @@ paths=(
     .config/yazi
     .config/cava
     .config/starship.toml
+    .config/fcitx5
+    .local/share/fcitx5/themes/obsidian-ember-tui
+    .config/qutebrowser
     .config/quickshell
     .config/silicon/themes
     .config/LiteLoaderQQNT/plugins/obsidian-ember
@@ -49,6 +52,8 @@ done
 cp -a "$repo_dir/.config/." "$HOME/.config/"
 mkdir -p "$HOME/.local/share/applications"
 cp -a "$repo_dir/.local/share/applications/." "$HOME/.local/share/applications/"
+mkdir -p "$HOME/.local/share/fcitx5/themes"
+cp -a "$repo_dir/.local/share/fcitx5/themes/." "$HOME/.local/share/fcitx5/themes/"
 
 printf 'Restored. Previous files: %s\n' "$backup_dir"
 printf '%s\n' 'Restart the affected applications or log in again.'

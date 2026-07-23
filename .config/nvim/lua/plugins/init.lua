@@ -106,14 +106,6 @@ return {
     },
     { "petRUShka/vim-sage" },
     {
-        "chomosuke/typst-preview.nvim",
-        ft = "typst",
-        version = "^1.0.0",
-        opts = {
-            get_root = require("configs.typst").root,
-        },
-    },
-    {
         "nvim-treesitter/nvim-treesitter",
         opts = {
             ensure_installed = { "vim", "lua", "vimdoc", "html", "css", "cpp", "c", "python", "latex", "typst" },
@@ -352,7 +344,9 @@ return {
         lazy = false,
         version = "1.*",
         opts = {
-            open_cmd = "firefox %s",
+            open_cmd = "/usr/bin/chromium --disable-gpu --app=%s",
+            invert_colors = "always",
+            get_root = require("configs.typst").root,
             dependencies_bin = {
                 tinymist = "tinymist",
             }
