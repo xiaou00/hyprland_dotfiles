@@ -78,6 +78,8 @@ map("n", "<leader>r", function()
 end, { desc = "Run code / Run markdown codeblock" })
 
 -- Typst
+map('n', '<leader>tp', '<cmd>TypstPreviewToggle<CR>', { desc = 'Toggle Typst preview' })
+
 local typst_job = nil
 map('n', '<leader>tc', function()
     if typst_job then
